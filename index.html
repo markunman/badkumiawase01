@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>らんだむ・いろは バドミントン対戦管理共有システム Ver1.0</title>
+    <style>
+        :root {
+            --court1-bg: #E3F2FD; --court1-border: #2196F3;
+            --court2-bg: #FFF3E0; --court2-border: #FF9800;
+            --court3-bg: #F3E5F5; --court3-border: #9C27B0;
+            --rest-bg: #f5f5f5; --text-main: #333;
+        }
+        body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 10px; color: var(--text-main); line-height: 1.4; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        
+        /* タイトルエリア */
+        .header-title { text-align: center; margin-bottom: 15px; }
+        .header-title h1 { font-size: 1.1rem; color: #1a73e8; margin: 5px 0; letter-spacing: 0.05em; }
+        .header-icon { font-size: 1.5rem; }
+
+        .setting-box { background: #eef2f7; border-radius: 12px; padding: 12px; margin-bottom: 15px; border: 1px solid #d1d9e0; }
+        .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .num-control { display: flex; align-items: center; gap: 12px; }
+        .court-selector { display: flex; align-items: center; gap: 10px; border-top: 1px solid #d1d9e0; margin-top: 10px; padding-top: 10px; }
+        .court-btn-group { display: flex; background: #ccc; border-radius: 8px; padding: 2px; flex-grow: 1; }
+        .court-btn { flex: 1; border: none; background: none; padding: 8px; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 0.85rem; color: #555; transition: 0.2s; }
+        .court-btn.active { background: white; color: #1a73e8; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .circle-btn { width: 40px; height: 40px; border: none; border-radius: 50%; cursor: pointer; font-size: 1.5rem; color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-plus { background: #34a853; }
+        .btn-minus { background: #ea4335; }
+        .count-display { font-size: 2.2rem; font-weight: bold; color: #1a73e8; min-width: 55px; text-align: center; }
+        
+        .game-block-title { background: #5f6368; color: white; padding: 4px 12px; font-size: 0.8rem; border-radius: 20px; margin: 20px 0 8px 0; display: inline-block; font-weight: bold; }
+        .round { padding: 12px; border: 1px solid #eee; border-radius: 12px; margin-bottom: 10px; background: white; transition: 0.3s; }
+        .round.done { background: #f8f9fa !important; opacity: 0.5; }
+        .round-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: bold; font-size: 0.95rem; }
+        
+        /* 試合中チェックボックスを大きく */
+        input[type="checkbox"] { transform: scale(1.3); cursor: pointer; }
+
+        .courts-container { display: flex; flex-direction: column; gap: 8px; }
+        .court { padding: 10px; border-radius: 8px; border: 2px solid; display: flex; justify-content: space-around; font-size: 1.25rem; font-weight: bold; }
+        .court-1 { background: var(--court1-bg); border-color: var(--court1-border); color: #0d47a1; }
+        .court-2 { background: var(--court2-bg); border-color: var(--court2-border); color: #e65100; }
+        .court-3 { background: var(--court3-bg); border-color: var(--court3-border); color: #4a148c; }
+        .vs { font-size: 0.75rem; color: #666; align-self: center; font-weight: normal; }
+        
+        .rest-area { margin-top: 10px; padding: 8px; background: #f9f9f9; border-radius: 8px; font-size: 0.85rem; color: #666; border-left: 4px solid #bdc1c6; }
+        .btn-share { background: #1a73e8; color: white; width: 100%; border: none; padding: 16px; border-radius: 12px; font-weight: bold; font-size: 1rem; margin-top: 25px; cursor: pointer; box-shadow: 0 4px 6px rgba(26,115,232,0.3); }
+        .btn-share:active { transform: translateY(2px); box-shadow: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-title">
+        <div class="header-icon">🏸</div>
+        <h1>らんだむ・いろは</h1>
+        <h1>バドミントン対戦管理共有システム Ver1.0</h1>
+    </div>
+    
+    <div class="setting-box">
+        <div class="controls">
+            <div class="num-control">
+                <button class="circle-btn btn-minus" onclick="changeP(-1)">－</button>
+                <div class="count-display" id="pCount">8</div>
+                <button class="circle-btn btn-plus" onclick="changeP(1)">＋</button>
+            </div>
+            <div style="font-weight: bold; font-size: 1.1rem;">人</div>
+        </div>
+        
+        <div class="court-selector">
+            <span style="font-size: 0.9rem; font-weight: bold; color: #555;">使用コート数:</span>
+            <div class="court-btn-group">
+                <button id="cBtn1" class="court-btn" onclick="changeC(1)">1面</button>
+                <button id="cBtn2" class="court-btn" onclick="changeC(2)">2面</button>
+                <button id="cBtn3" class="court-btn" onclick="changeC(3)">3面</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="matchBoard"></div>
+    <button class="btn-share" onclick="shareUrl()">📋 状況をコピーしてメンバーに共有</button>
+</div>
+
+<script>
+// 対戦表データ (4人〜27人)
+const PAIRINGS = {
+    4: ["1,2 v 3,4", "1,3 v 2,4", "1,4 v 2,3"],
+    5: ["1,2 v 4,5", "1,3 v 2,4", "1,4 v 3,5", "1,5 v 2,3", "2,5 v 3,4", "2,4 v 3,5"],
+    6: ["1,2 v 4,5", "1,3 v 2,6", "3,5 v 4,6", "1,4 v 5,6", "1,6 v 2,3", "2,5 v 3,4"],
+    7: ["1,2 v 3,4", "1,5 v 6,7", "2,6 v 4,7", "2,3 v 5,7", "1,3 v 4,6", "3,7 v 5,6"],
+    8: ["1,2 v 3,4 / 5,6 v 7,8", "2,4 v 6,8 / 1,3 v 5,7", "1,5 v 2,6 / 3,7 v 4,8", "2,5 v 4,7 / 1,6 v 3,8", "1,4 v 3,6 / 2,7 v 5,8"],
+    9: ["1,2 v 4,5 / 6,7 v 8,9", "3,4 v 5,7 / 1,8 v 2,9", "1,5 v 7,8 / 2,4 v 3,6", "3,5 v 4,9 / 1,7 v 2,6", "2,8 v 5,9 / 4,6 v 1,3"],
+    10: ["1,4 v 2,9 / 3,5 v 8,10", "2,4 v 5,10 / 1,6 v 7,8", "1,8 v 7,10 / 2,3 v 6,9", "4,9 v 6,8 / 2,5 v 3,7", "1,9 v 5,8 / 3,10 v 4,7"],
+    11: ["1,2 v 3,4 / 5,6 v 9,11", "7,8 v 9,10 / 3,5 v 4,6", "1,7 v 6,8 / 2,9 v 10,11", "4,11 v 7,10 / 1,3 v 2,5", "5,8 v 6,9 / 3,11 v 1,4"],
+    12: ["1,7 v 3,9 / 2,4 v 5,6 / 8,10 v 11,12", "6,8 v 9,10 / 1,12 v 4,11 / 2,5 v 3,7", "2,3 v 8,9 / 4,7 v 10,11 / 1,6 v 5,12", "1,3 v 6,11 / 2,12 v 7,9 / 4,5 v 8,10"],
+    13: ["1,13 v 2,12 / 3,11 v 4,10 / 5,9 v 6,8", "1,12 v 3,13 / 2,11 v 5,10 / 4,9 v 7,8", "1,11 v 4,12 / 2,10 v 6,13 / 3,9 v 5,8"],
+    14: ["1,14 v 2,13 / 3,12 v 4,11 / 5,10 v 6,9", "1,13 v 3,14 / 2,12 v 5,11 / 4,10 v 7,14", "1,12 v 4,13 / 2,11 v 6,14 / 3,10 v 5,9"],
+    15: ["1,15 v 2,14 / 3,13 v 4,12 / 5,11 v 6,10", "1,14 v 3,15 / 2,13 v 5,12 / 4,11 v 7,10", "1,13 v 4,14 / 2,12 v 6,15 / 3,12 v 5,11"],
+    16: ["1,16 v 2,15 / 3,14 v 4,13 / 5,12 v 6,11", "1,15 v 3,16 / 2,14 v 5,13 / 4,12 v 7,11", "1,14 v 4,15 / 2,13 v 6,16 / 3,12 v 7,10"],
+    17: ["1,17 v 2,16 / 3,15 v 4,14 / 5,13 v 6,12", "1,16 v 3,17 / 2,15 v 5,14 / 4,13 v 7,12"],
+    18: ["1,18 v 2,17 / 3,16 v 4,15 / 5,14 v 6,13", "1,17 v 3,18 / 2,16 v 5,15 / 4,14 v 7,13"],
+    19: ["1,19 v 2,18 / 3,17 v 4,16 / 5,15 v 6,14", "1,18 v 3,19 / 2,17 v 5,16 / 4,15 v 7,14"],
+    20: ["1,20 v 2,19 / 3,18 v 4,17 / 5,16 v 6,15", "1,19 v 3,20 / 2,18 v 5,17 / 4,16 v 7,15"],
+    21: ["1,21 v 2,20 / 3,19 v 4,18 / 5,17 v 6,16", "1,20 v 3,21 / 2,19 v 5,18 / 4,17 v 7,16"],
+    22: ["1,22 v 2,21 / 3,20 v 4,19 / 5,18 v 6,17", "1,21 v 3,22 / 2,20 v 5,19 / 4,18 v 7,17"],
+    23: ["1,23 v 2,22 / 3,21 v 4,20 / 5,19 v 6,18", "1,22 v 3,23 / 2,21 v 5,20 / 4,19 v 7,18"],
+    24: ["1,24 v 2,23 / 3,22 v 4,21 / 5,20 v 6,19", "1,23 v 3,24 / 2,22 v 5,21 / 4,20 v 7,19"],
+    25: ["1,25 v 2,24 / 3,23 v 4,22 / 5,21 v 6,20", "1,24 v 3,25 / 2,23 v 5,22 / 4,21 v 7,20"],
+    26: ["1,26 v 2,25 / 3,24 v 4,23 / 5,22 v 6,21", "1,25 v 3,26 / 2,24 v 5,23 / 4,22 v 7,21"],
+    27: ["1,27 v 2,26 / 3,25 v 4,24 / 5,23 v 6,22", "1,26 v 3,27 / 2,25 v 5,24 / 4,23 v 7,22"]
+};
+
+let state = { p: 8, courts: 3, done: [] };
+
+function getPairing(p, roundIdx) {
+    let raw = "";
+    if (PAIRINGS[p] && PAIRINGS[p][roundIdx]) {
+        raw = PAIRINGS[p][roundIdx];
+    } else {
+        const offset = (roundIdx * 4) % p;
+        let players = [];
+        for(let i=0; i<12; i++) players.push(((offset + i) % p) + 1);
+        let res = [];
+        for(let i=0; i<players.length; i+=4) res.push(`${players[i]},${players[i+1]} v ${players[i+2]},${players[i+3]}`);
+        raw = res.join(' / ');
+    }
+    return raw.split(' / ').slice(0, state.courts).join(' / ');
+}
+
+function render() {
+    try {
+        document.getElementById('pCount').innerText = state.p;
+        [1,2,3].forEach(n => {
+            const btn = document.getElementById(`cBtn${n}`);
+            if(btn) btn.className = `court-btn ${state.courts === n ? 'active' : ''}`;
+        });
+
+        const board = document.getElementById('matchBoard');
+        board.innerHTML = '';
+
+        for (let i = 0; i < 20; i++) {
+            if (i % 5 === 0) {
+                const head = document.createElement('div');
+                head.className = 'game-block-title';
+                head.innerText = `第 ${i+1} 〜 ${i+5} 試合`;
+                board.appendChild(head);
+            }
+
+            const raw = getPairing(state.p, i);
+            const isDone = state.done.includes(i);
+            const activeNums = raw.replace(/[^\d,]/g, ',').split(',').filter(x => x).map(Number);
+            const restNums = Array.from({length: state.p}, (_, idx) => idx + 1).filter(n => !activeNums.includes(n));
+
+            const roundDiv = document.createElement('div');
+            roundDiv.className = `round ${isDone ? 'done' : ''}`;
+            
+            let courtsHtml = raw.split(' / ').map((c, idx) => {
+                const parts = c.split(' v ');
+                return `<div class="court court-${idx+1}"><span>${parts[0]}</span><span class="vs">vs</span><span>${parts[1]}</span></div>`;
+            }).join('');
+
+            roundDiv.innerHTML = `
+                <div class="round-title"><span>試合 ${i+1}</span><input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggle(${i})"></div>
+                <div class="courts-container">${courtsHtml}</div>
+                <div class="rest-area">休憩：${restNums.join(', ')}</div>
+            `;
+            board.appendChild(roundDiv);
+        }
+    } catch(e) { console.error(e); }
+}
+
+function changeP(n) { state.p = Math.max(4, Math.min(30, state.p + n)); render(); }
+function changeC(n) { state.courts = n; render(); }
+function toggle(i) {
+    if(state.done.includes(i)) state.done = state.done.filter(x => x !== i);
+    else state.done.push(i);
+    render();
+}
+function shareUrl() {
+    const url = new URL(window.location.href);
+    url.searchParams.set('p', state.p);
+    url.searchParams.set('c', state.courts);
+    url.searchParams.set('d', state.done.join(','));
+    navigator.clipboard.writeText(url.href).then(() => alert("共有用URLをコピーしました！LINE等でメンバーに送れます。"));
+}
+
+window.onload = function() {
+    const params = new URLSearchParams(window.location.search);
+    if(params.has('p')) state.p = parseInt(params.get('p'));
+    if(params.has('c')) state.courts = parseInt(params.get('c'));
+    if(params.has('d')) state.done = params.get('d').split(',').filter(x=>x).map(Number);
+    render();
+};
+setTimeout(render, 300);
+</script>
+</body>
+</html>
