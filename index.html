@@ -13,15 +13,17 @@
         body { font-family: -apple-system, sans-serif; background: #f0f2f5; margin: 0; padding: 10px; color: var(--text-main); }
         .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; }
         
+        /* 管理者バッジ */
         .admin-badge { position: absolute; top: 10px; right: 10px; font-size: 0.7rem; padding: 4px 8px; border-radius: 20px; background: #eee; color: #777; cursor: pointer; border: none; z-index: 10; }
         .admin-badge.is-admin { background: var(--admin-color); color: white; font-weight: bold; }
 
         .header { text-align: center; margin-bottom: 10px; }
         .header h1 { font-size: 1.2rem; color: #1a73e8; margin: 5px 0; }
         
-        .admin-only { display: none; }
-        .is-admin .admin-only { display: block; }
-        .is-admin .view-only { display: none; }
+        /* 権限による表示制御 */
+        .admin-only { display: none !important; }
+        .is-admin .admin-only { display: block !important; }
+        .is-admin .view-only { display: none !important; }
 
         .setting-box { background: #eef2f7; border-radius: 12px; padding: 15px; margin-bottom: 15px; border: 1px solid #d1d9e0; text-align: center; }
         .controls { display: flex; justify-content: center; align-items: center; gap: 20px; margin-bottom: 10px; }
@@ -30,7 +32,6 @@
         .btn-minus { background: #ea4335; }
         .count-display { font-size: 2.5rem; font-weight: bold; color: #1a73e8; min-width: 80px; }
 
-        /* 名前入力エリア */
         .name-edit-area { text-align: left; background: white; padding: 10px; border-radius: 8px; border: 1px solid #ccc; margin-top: 10px; }
         .name-edit-area textarea { width: 100%; box-sizing: border-box; border: 1px solid #eee; padding: 5px; font-size: 0.9rem; resize: vertical; }
 
@@ -48,9 +49,10 @@
         
         .rest-area { margin-top: 10px; padding: 8px; background: #f1f3f4; border-radius: 8px; font-size: 0.8rem; color: #666; }
         
-        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .btn-action { color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; font-size: 0.85rem; cursor: pointer; }
+        .btn-group { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
+        .btn-action { color: white; border: none; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 0.9rem; cursor: pointer; transition: opacity 0.2s; }
         .btn-blue { background: #1a73e8; }
+        .btn-orange { background: #ff9800; }
         .btn-green { background: #34a853; }
         .admin-msg { font-size: 0.8rem; color: var(--admin-color); font-weight: bold; text-align: center; margin-bottom: 5px; }
     </style>
@@ -62,7 +64,7 @@
     
     <div class="header">
         <h1>🏸 2面専用 対戦管理</h1>
-        <div id="modeMsg" class="admin-msg" style="display:none;">【管理者モード】編集・コピー可能です</div>
+        <div id="modeMsg" class="admin-msg" style="display:none;">【管理者モード】編集・リンク出力が可能</div>
     </div>
     
     <div class="setting-box">
@@ -80,19 +82,20 @@
         </div>
         <div class="view-only">
             <div class="count-display" id="pCountView">8人</div>
+            <p style="font-size: 0.8rem; color: #666;">※閲覧専用モードです</p>
         </div>
     </div>
 
     <div id="matchBoard"></div>
     
     <div class="admin-only btn-group">
-        <button class="btn-action btn-blue" onclick="shareUrl()">🔗 URLをコピー</button>
+        <button class="btn-action btn-orange" onclick="copyHtmlLink()">🌐 HTMLリンクとしてコピー</button>
+        <button class="btn-action btn-blue" onclick="shareUrl()">🔗 URLのみコピー</button>
         <button class="btn-action btn-green" onclick="copyTextSummary()">📝 テキスト形式でコピー</button>
     </div>
 </div>
 
 <script>
-// 全ロジックデータ（8-24人）
 const ALL_MATCH_DATA = {
     8: ["1,2 v 3,4 / 5,6 v 7,8", "1,3 v 5,7 / 2,4 v 6,8", "1,4 v 6,7 / 2,3 v 5,8", "1,5 v 2,6 / 3,7 v 4,8", "1,6 v 3,8 / 2,5 v 4,7", "1,7 v 2,8 / 3,5 v 4,6", "1,8 v 4,5 / 2,7 v 3,6", "1,2 v 5,8 / 3,4 v 6,7", "1,3 v 6,8 / 2,4 v 5,7"],
     9: ["1,2 v 3,4 / 5,6 v 7,8", "9,1 v 2,3 / 4,5 v 6,7", "8,9 v 1,2 / 3,4 v 5,6", "7,8 v 9,1 / 2,3 v 4,5", "6,7 v 8,9 / 1,2 v 3,4", "5,6 v 7,8 / 9,1 v 2,3", "4,5 v 6,7 / 8,9 v 1,2", "3,4 v 5,6 / 7,8 v 9,1", "2,3 v 4,5 / 6,7 v 8,9"],
@@ -115,16 +118,10 @@ const ALL_MATCH_DATA = {
 
 let state = { p: 8, done: [], isAdmin: false, names: [] };
 
-function getRoundName(i) {
-    return "試合" + String.fromCharCode(65 + i); // 0 -> A, 1 -> B...
-}
-
-function getName(num) {
-    return state.names[num - 1] || num;
-}
+function getRoundName(i) { return "試合" + String.fromCharCode(65 + i); }
+function getName(num) { return state.names[num - 1] || num; }
 
 function formatMatch(raw) {
-    // "1,2 v 3,4" を "名前,名前 vs 名前,名前" に置換
     return raw.split(' v ').map(pair => {
         return pair.split(',').map(n => getName(n)).join('・');
     }).join(' vs ');
@@ -155,11 +152,8 @@ function render() {
     matches.forEach((raw, i) => {
         const isDone = state.done.includes(i);
         const courts = raw.split(' / ');
-        
         const playing = raw.replace(/[^\d,]/g, ',').split(',').filter(x => x).map(Number);
-        const rest = Array.from({length: state.p}, (_, j) => j + 1)
-                          .filter(n => !playing.includes(n))
-                          .map(n => getName(n));
+        const rest = Array.from({length: state.p}, (_, j) => j + 1).filter(n => !playing.includes(n)).map(n => getName(n));
 
         const roundDiv = document.createElement('div');
         roundDiv.className = `round ${isDone ? 'done' : ''}`;
@@ -208,33 +202,41 @@ function toggle(i) {
     render();
 }
 
-// 共有URLコピー (名前データもURLに含める)
-function shareUrl() {
+// URL生成ロジック共通化
+function generateCurrentUrl() {
     const url = new URL(window.location.href.split('?')[0]);
     url.searchParams.set('p', state.p);
     url.searchParams.set('d', state.done.join(','));
     if(state.names.length > 0) url.searchParams.set('n', state.names.join(','));
-    navigator.clipboard.writeText(url.href).then(() => alert("閲覧用URLをコピーしました"));
+    return url.href;
 }
 
-// テキスト形式でのコピー機能
+// 管理者専用: HTMLリンクコピー
+function copyHtmlLink() {
+    if (!state.isAdmin) return;
+    const linkUrl = generateCurrentUrl();
+    const htmlTag = `<a href="${linkUrl}">本日のゲーム組み合わせ</a>`;
+    navigator.clipboard.writeText(htmlTag).then(() => alert("HTMLリンクをコピーしました。\nサイトのHTML編集画面に貼り付けてください。"));
+}
+
+// 管理者専用: URLのみコピー
+function shareUrl() {
+    if (!state.isAdmin) return;
+    navigator.clipboard.writeText(generateCurrentUrl()).then(() => alert("閲覧用URLをコピーしました"));
+}
+
+// 管理者専用: テキスト形式コピー
 function copyTextSummary() {
+    if (!state.isAdmin) return;
     let text = "🏸 本日のゲーム組み合わせ\n--------------------------\n";
     const matches = ALL_MATCH_DATA[state.p];
-    
     matches.forEach((raw, i) => {
         const mark = state.done.includes(i) ? "【終了】" : "";
         text += `${getRoundName(i)} ${mark}\n`;
-        const courts = raw.split(' / ');
-        courts.forEach((c, idx) => {
-            text += `  コート${idx+1}: ${formatMatch(c)}\n`;
-        });
+        raw.split(' / ').forEach((c, idx) => { text += `  コート${idx+1}: ${formatMatch(c)}\n`; });
         text += "\n";
     });
-
-    navigator.clipboard.writeText(text).then(() => {
-        alert("テキスト形式でコピーしました。LINE等に貼り付けられます。");
-    });
+    navigator.clipboard.writeText(text).then(() => alert("テキストをコピーしました。"));
 }
 
 window.onload = function() {
@@ -242,8 +244,7 @@ window.onload = function() {
     if(params.has('p')) state.p = parseInt(params.get('p'));
     if(params.has('d')) state.done = params.get('d').split(',').filter(x=>x).map(Number);
     if(params.has('n')) {
-        const nParam = params.get('n');
-        state.names = nParam.split(',');
+        state.names = params.get('n').split(',');
         document.getElementById('nameList').value = state.names.join('\n');
     }
     render();
